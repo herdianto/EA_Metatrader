@@ -145,7 +145,7 @@ void OnTick(void)
       lower = true;
    }
    if(lower == true && iRsi_handle >= iRSIBuyLimit){
-      //SendNotification("RSI rises up from 31 : "+TimeCurrent());
+      SendNotification("prepare to buy, RSI: "+iRsi_handle);
       Print("prepare to buy, RSI: ",iRsi_handle);
       lower = false;
    }
@@ -179,7 +179,7 @@ void OnTick(void)
    }
    
    if(upper == true && iRsi_handle <= iRSISellLimit){
-     //SendNotification("RSI falls down from 71 : "+TimeCurrent());
+     SendNotification("prepare to sell, RSI: "+iRsi_handle);
      Print("prepare to sell, RSI: ",iRsi_handle);
      upper = false;
    }
