@@ -15,7 +15,7 @@ input int    MovingShift        = 6;       // Moving Average shift
 //---
 
 //Transaction indicator
-
+double test=0;
 
 //iOsMA
 double iOsMA_handle;
@@ -52,7 +52,8 @@ bool IsNewBar=false;
 //+------------------------------------------------------------------+
 int OnInit(void)
   {
-  //SendNotification("robot started!");
+  Print("robot started!");
+  SendNotification("robot started!");
   int FillingMode=(int)SymbolInfoInteger(_Symbol,SYMBOL_FILLING_MODE);
   Comment (
       "Filling Mode: ",FillingMode,
