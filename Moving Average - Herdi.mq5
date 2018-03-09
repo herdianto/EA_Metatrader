@@ -15,8 +15,7 @@ input int    MovingShift        = 6;       // Moving Average shift
 //---
 
 //Validation
-CAccountInfo account;
-ENUM_ACCOUNT_TRADE_MODE account_type=account.TradeMode();
+//1. add acct validation (real/demo): https://www.mql5.com/en/articles/481
 
 //Transaction indicator
 bool   iRSIReady_long=false;
