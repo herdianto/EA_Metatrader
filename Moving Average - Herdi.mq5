@@ -14,7 +14,14 @@ input int    MovingPeriod       = 12;      // Moving Average period
 input int    MovingShift        = 6;       // Moving Average shift
 //---
 
+//Validation
+CAccountInfo account;
+ENUM_ACCOUNT_TRADE_MODE account_type=account.TradeMode();
+
 //Transaction indicator
+bool   iRSIReady_long=false;
+bool   iRSIReady_short=false;
+bool   iOsMAReady=false;
 double test=0;
 
 //iOsMA
@@ -93,8 +100,8 @@ void OnTick(void)
       Old_Time=New_Time[0];            // saving bar time
       
       //iOsMA Indicator
-      CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,1,iOsMABuffer);
-      iOsMA_handle = iOsMABuffer[0];
+      //CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,1,iOsMABuffer);
+      //iOsMA_handle = iOsMABuffer[0];
       //Print("iOsMA value :",iOsMA_handle);
    }
   }
@@ -107,11 +114,6 @@ void OnTick(void)
   //if(PreviousTime <= TimeCurrent() - (tickMinutes * 60)){
   if(IsNewBar==true){
    PreviousTime = TimeCurrent();
-   
-   //iOsMA Indicator
-   CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,1,iOsMABuffer);
-   iOsMA_handle = iOsMABuffer[0];
-   //Print("iOsMA value :",iOsMA_handle);
       
    //iRSI Indicator
    CopyBuffer(iRSI(_Symbol,PERIOD_CURRENT,iRsi_per,PRICE_CLOSE),0,0,1,iRSIBuffer);
@@ -145,8 +147,9 @@ void OnTick(void)
       lower = true;
    }
    if(lower == true && iRsi_handle >= iRSIBuyLimit){
-      SendNotification("prepare to buy, RSI: "+iRsi_handle);
-      Print("prepare to buy, RSI: ",iRsi_handle);
+      //SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
+      Print("prepare to open position - long, RSI: ",iRsi_handle);
+      iRSIReady_long = true;
       lower = false;
    }
    
@@ -179,12 +182,34 @@ void OnTick(void)
    }
    
    if(upper == true && iRsi_handle <= iRSISellLimit){
-     SendNotification("prepare to sell, RSI: "+iRsi_handle);
-     Print("prepare to sell, RSI: ",iRsi_handle);
+     //SendNotification("prepare to open position - short, RSI: "+iRsi_handle);
+     Print("prepare to open position - short, RSI: ",iRsi_handle);
+     iRSIReady_short = true;
      upper = false;
    }
    
   }
+  
+  if(iRSIReady_short){
+      //iOsMA Indicator
+      CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
+      iOsMA_handle = iOsMABuffer[0];
+      if(iOsMABuffer[1]<iOsMABuffer[0]){
+         iRSIReady_short = false;
+         Print("Place short position now, price = ",getLatestClosePrice());
+      }
+  }
+  
+  if(iRSIReady_long){
+      //iOsMA Indicator
+      CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
+      iOsMA_handle = iOsMABuffer[0];
+      if(iOsMABuffer[1]>iOsMABuffer[0]){
+         iRSIReady_long = false;
+         Print("Place long position now, price = ",getLatestClosePrice());
+      }
+  }
+  
   IsNewBar=false;
 //---
   }
