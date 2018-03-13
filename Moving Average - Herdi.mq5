@@ -12,16 +12,24 @@ input double MaximumRisk        = 0.02;    // Maximum Risk in percentage
 input double DecreaseFactor     = 3;       // Descrease factor
 input int    MovingPeriod       = 12;      // Moving Average period
 input int    MovingShift        = 6;       // Moving Average shift
+input int    EA_Magic=12345;   // EA Magic Number
 //---
 
 //Validation
 //1. add acct validation (real/demo): https://www.mql5.com/en/articles/481
 
 //Transaction indicator
+MqlTradeRequest request={0};
+MqlTradeResult result={0};
+MqlDateTime dt;
+bool bord=false, sord=false;
+ulong ticket;
+datetime t[];
 bool   iRSIReady_long=false;
 bool   iRSIReady_short=false;
 bool   iOsMAReady=false;
 double test=0;
+int i =0;
 
 //iOsMA
 double iOsMA_handle;
@@ -56,10 +64,16 @@ bool IsNewBar=false;
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-int OnInit(void)
-  {
+int OnInit(void){
+  //--- make sure that the account is demo 
+   if(AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_REAL) 
+     { 
+      Alert("Script operation is not allowed on a live account!"); 
+      return 0; 
+     } 
+  bool a=IsFillingTypeAllowed(_Symbol, 0);
   Print("robot started!");
-  SendNotification("robot started!");
+  //SendNotification("robot started!");
   int FillingMode=(int)SymbolInfoInteger(_Symbol,SYMBOL_FILLING_MODE);
   Comment (
       "Filling Mode: ",FillingMode,
@@ -88,7 +102,22 @@ int OnInit(void)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick(void)
-  {
+  { 
+  if(i == 0){
+  /*
+         mrequest.action = TRADE_ACTION_DEAL;                                  // immediate order execution
+         mrequest.price = NormalizeDouble(latest_price.ask,_Digits);           // latest ask price
+         mrequest.sl = NormalizeDouble(latest_price.ask - STP*_Point,_Digits); // Stop Loss
+         mrequest.tp = NormalizeDouble(latest_price.ask + TKP*_Point,_Digits); // Take Profit
+         mrequest.symbol = _Symbol;                                            // currency pair
+         mrequest.volume = Lot;                                                 // number of lots to trade
+         mrequest.magic = EA_Magic;                                             // Order Magic Number
+         mrequest.type = ORDER_TYPE_BUY;                                        // Buy Order
+         mrequest.type_filling = ORDER_FILLING_IOC;                             // Order execution type
+         mrequest.deviation=100;
+         */
+  }
+  i=1;
   //for new bar checking
   int copied=CopyTime(_Symbol,_Period,0,1,New_Time);
   if(copied>0){ // ok, the data has been copied successfully
@@ -119,10 +148,9 @@ void OnTick(void)
    iRsi_handle = iRSIBuffer[0];
    
    //buy signal
-   //printf(TimeCurrent()+" "+lower_35);
    if(iRsi_handle < 35){
       if(lower_35 == false){
-         //SendNotification("RSI lower than 35 : "+TimeCurrent());
+         Print("RSI lower than 35 : ",TimeCurrent());
          lower_35 = true;
       }else{
          
@@ -133,7 +161,7 @@ void OnTick(void)
    
    if(iRsi_handle < 30 && lower_30 == false){
       if(lower_30 == false){
-         //SendNotification("RSI lower than 30 : "+TimeCurrent());
+         Print("RSI lower than 30 : ",TimeCurrent());
          lower_30 = true;
       }else{
          
@@ -144,13 +172,18 @@ void OnTick(void)
    
    if(iRsi_handle < iRSIBuyLimit && lower == false){
       lower = true;
-   }
-   if(lower == true && iRsi_handle >= iRSIBuyLimit){
-      //SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
+      SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
       Print("prepare to open position - long, RSI: ",iRsi_handle);
       iRSIReady_long = true;
+   }
+   
+   if(lower == true && iRsi_handle >= iRSIBuyLimit){
+      //SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
+      //Print("prepare to open position - long, RSI: ",iRsi_handle);
+      //iRSIReady_long = true;
       lower = false;
    }
+   
    
    
    //sell signal
@@ -177,15 +210,20 @@ void OnTick(void)
    }
    
    if(iRsi_handle > iRSISellLimit && upper == false){
-      upper = true;
+       SendNotification("prepare to open position - short, RSI: "+iRsi_handle);
+       Print("prepare to open position - short, RSI: ",iRsi_handle);
+       iRSIReady_short = true;
+       upper = true;
    }
+   
    
    if(upper == true && iRsi_handle <= iRSISellLimit){
      //SendNotification("prepare to open position - short, RSI: "+iRsi_handle);
-     Print("prepare to open position - short, RSI: ",iRsi_handle);
-     iRSIReady_short = true;
+     //Print("prepare to open position - short, RSI: ",iRsi_handle);
+     //iRSIReady_short = true;
      upper = false;
    }
+   
    
   }
   
@@ -195,8 +233,10 @@ void OnTick(void)
       iOsMA_handle = iOsMABuffer[0];
       if(iOsMABuffer[1]<iOsMABuffer[0]){
          iRSIReady_short = false;
+         SendNotification("Place short position now, price = "+getLatestClosePrice());
          Print("Place short position now, price = ",getLatestClosePrice());
       }
+      //upper = false;
   }
   
   if(iRSIReady_long){
@@ -205,8 +245,20 @@ void OnTick(void)
       iOsMA_handle = iOsMABuffer[0];
       if(iOsMABuffer[1]>iOsMABuffer[0]){
          iRSIReady_long = false;
+         SendNotification("Place long position now, price = "+getLatestClosePrice());
          Print("Place long position now, price = ",getLatestClosePrice());
+         ZeroMemory(request);
+         request.action   =TRADE_ACTION_DEAL;                     // type of trade operation
+         request.symbol   =Symbol();                              // symbol
+         request.volume   =0.01;                                   // volume of 0.1 lot
+         request.type     =ORDER_TYPE_BUY;                        // order type
+         request.price    =NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK), _Digits); // price for opening
+         request.deviation=100;                                     // allowed deviation from the price
+         request.magic    =EA_Magic;   
+         request.type_filling = ORDER_FILLING_IOC;  
+         OrderSend(request,result);
       }
+      //lower = false;
   }
   
   IsNewBar=false;
@@ -228,3 +280,14 @@ double getLatestClosePrice(){
    // Copy latest close price.
    return BarData[0].close;
 }
+
+//+------------------------------------------------------------------+ 
+//| Checks if the specified filling mode is allowed                  | 
+//+------------------------------------------------------------------+ 
+bool IsFillingTypeAllowed(string symbol,int fill_type) 
+  { 
+//--- Obtain the value of the property that describes allowed filling modes 
+   int filling=(int)SymbolInfoInteger(symbol,SYMBOL_FILLING_MODE); 
+//--- Return true, if mode fill_type is allowed 
+   return((filling & fill_type)==fill_type); 
+  }
