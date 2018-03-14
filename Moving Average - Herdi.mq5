@@ -44,6 +44,8 @@ double   ask;
 int      stop_level;
 double   price_level; 
 double   currentProfit;
+double   sl;
+double   tp;
 
 
 //iOsMA
@@ -86,6 +88,7 @@ int OnInit(void){
       Alert("Script operation is not allowed on a live account!"); 
       return 0; 
      } 
+  //bool openLong = openPosition(0.01, "ORDER_TYPE_BUY", -100, 150);
   int positionTotal = PositionsTotal();
   ArrayResize(tickets,positionTotal);
   for(int x=0; x<positionTotal; x++){
@@ -99,8 +102,9 @@ int OnInit(void){
      ask=SymbolInfoDouble(symbol,SYMBOL_ASK);
      stop_level=(int)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
      currentProfit = PositionGetDouble(POSITION_PROFIT);
+     price_level = stop_level*SymbolInfoDouble(symbol,SYMBOL_POINT);
   }
-  bool closePosition = trade.PositionClose(ticket,1);
+  //bool closePosition = trade.PositionClose(ticket,1);
   bool a=IsFillingTypeAllowed(_Symbol, 0);
   Print("robot started!");
   //SendNotification("robot started!");
@@ -133,21 +137,6 @@ int OnInit(void){
 //+------------------------------------------------------------------+
 void OnTick(void)
   { 
-  if(i == 0){
-  /*
-         mrequest.action = TRADE_ACTION_DEAL;                                  // immediate order execution
-         mrequest.price = NormalizeDouble(latest_price.ask,_Digits);           // latest ask price
-         mrequest.sl = NormalizeDouble(latest_price.ask - STP*_Point,_Digits); // Stop Loss
-         mrequest.tp = NormalizeDouble(latest_price.ask + TKP*_Point,_Digits); // Take Profit
-         mrequest.symbol = _Symbol;                                            // currency pair
-         mrequest.volume = Lot;                                                 // number of lots to trade
-         mrequest.magic = EA_Magic;                                             // Order Magic Number
-         mrequest.type = ORDER_TYPE_BUY;                                        // Buy Order
-         mrequest.type_filling = ORDER_FILLING_IOC;                             // Order execution type
-         mrequest.deviation=100;
-         */
-  }
-  i=1;
   //for new bar checking
   int copied=CopyTime(_Symbol,_Period,0,1,New_Time);
   if(copied>0){ // ok, the data has been copied successfully
@@ -257,39 +246,44 @@ void OnTick(void)
    
   }
   
+  //iOsMA Indicator
+  CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
+  iOsMA_handle = iOsMABuffer[0];
   if(iRSIReady_short){
-      //iOsMA Indicator
-      CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
-      iOsMA_handle = iOsMABuffer[0];
       if(iOsMABuffer[1]<iOsMABuffer[0]){
          iRSIReady_short = false;
          SendNotification("Place short position now, price = "+getLatestClosePrice());
          Print("Place short position now, price = ",getLatestClosePrice());
+         bool openShort = openPosition(0.01, "ORDER_TYPE_SELL", 150, -100);
       }
       //upper = false;
   }
   
   if(iRSIReady_long){
-      //iOsMA Indicator
-      CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
-      iOsMA_handle = iOsMABuffer[0];
       if(iOsMABuffer[1]>iOsMABuffer[0]){
          iRSIReady_long = false;
          SendNotification("Place long position now, price = "+getLatestClosePrice());
          Print("Place long position now, price = ",getLatestClosePrice());
-         ZeroMemory(request);
-         request.action   =TRADE_ACTION_DEAL;                     // type of trade operation
-         request.symbol   =Symbol();                              // symbol
-         request.volume   =0.01;                                   // volume of 0.1 lot
-         request.type     =ORDER_TYPE_BUY;                        // order type
-         request.price    =NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK), _Digits); // price for opening
-         request.deviation=100;                                     // allowed deviation from the price
-         request.magic    =EA_Magic;   
-         request.type_filling = ORDER_FILLING_IOC;  
-         //OrderSend(request,result);
+         bool openLong = openPosition(0.01, "ORDER_TYPE_BUY", -100, 150);
       }
       //lower = false;
   }
+  
+   int positionTotal = PositionsTotal();
+   ArrayResize(tickets,positionTotal);
+   for(int x=0; x<positionTotal; x++){
+      type=EnumToString((ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE));
+      ticket=PositionGetTicket(x);// ticket of the position
+      if(type == "ORDER_TYPE_BUY"){
+         if(iOsMABuffer[1]<iOsMABuffer[0]){
+            bool closePosition = trade.PositionClose(ticket,1);
+         }
+      }else if(type == "ORDER_TYPE_SELL"){
+         if(iOsMABuffer[1]>iOsMABuffer[0]){
+            bool closePosition = trade.PositionClose(ticket,1);
+         }
+      }
+   }
   
   IsNewBar=false;
 //---
@@ -321,3 +315,22 @@ bool IsFillingTypeAllowed(string symbol,int fill_type)
 //--- Return true, if mode fill_type is allowed 
    return((filling & fill_type)==fill_type); 
   }
+  
+bool openPosition(double volume, string type, double slDigits, double tpDigits){
+         ZeroMemory(request);
+         double point=SymbolInfoDouble(_Symbol,SYMBOL_POINT);
+         sl=NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK)+slDigits*point,_Digits);
+         tp=NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK)+tpDigits*point,_Digits);
+         request.action   =TRADE_ACTION_DEAL;                     // type of trade operation
+         request.symbol   =Symbol();                              // symbol
+         request.volume   =volume;                                   // volume of 0.1 lot
+         request.type     =type;                        // order type
+         request.price    =NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK), _Digits); // price for opening
+         request.deviation=10;
+         request.sl = sl;
+         request.tp = tp;                                     // allowed deviation from the price
+         request.magic    =EA_Magic;   
+         request.type_filling = ORDER_FILLING_IOC;  
+         OrderSend(request,result);
+         return true;
+}
