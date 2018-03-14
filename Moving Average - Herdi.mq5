@@ -3,10 +3,12 @@
 //|                   Copyright 2009-2017, MetaQuotes Software Corp. |
 //|                                              http://www.mql5.com |
 //+------------------------------------------------------------------+
+
 #property copyright "Copyright 2009-2017, MetaQuotes Software Corp."
 #property link      "http://www.mql5.com"
 #property version   "1.00"
 
+#include <Trade\Trade.mqh>
 
 input double MaximumRisk        = 0.02;    // Maximum Risk in percentage
 input double DecreaseFactor     = 3;       // Descrease factor
@@ -22,14 +24,27 @@ input int    EA_Magic=12345;   // EA Magic Number
 MqlTradeRequest request={0};
 MqlTradeResult result={0};
 MqlDateTime dt;
+CTrade  trade;
 bool bord=false, sord=false;
-ulong ticket;
 datetime t[];
 bool   iRSIReady_long=false;
 bool   iRSIReady_short=false;
 bool   iOsMAReady=false;
-double test=0;
+ulong  tickets[];
 int i =0;
+ulong    ticket; 
+double   openPrice; 
+double   volume; 
+datetime timeSetup; 
+string   symbol; 
+string   type;
+double   currentPrice;
+double   bid;
+double   ask;
+int      stop_level;
+double   price_level; 
+double   currentProfit;
+
 
 //iOsMA
 double iOsMA_handle;
@@ -71,6 +86,21 @@ int OnInit(void){
       Alert("Script operation is not allowed on a live account!"); 
       return 0; 
      } 
+  int positionTotal = PositionsTotal();
+  ArrayResize(tickets,positionTotal);
+  for(int x=0; x<positionTotal; x++){
+     tickets[x] = PositionGetTicket(x);
+     ticket=PositionGetTicket(x);// ticket of the position
+     symbol=PositionGetString(POSITION_SYMBOL); // symbol 
+     openPrice=PositionGetDouble(POSITION_PRICE_OPEN);
+     type=EnumToString((ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE));
+     volume=PositionGetDouble(POSITION_VOLUME);  
+     bid=SymbolInfoDouble(symbol,SYMBOL_BID);
+     ask=SymbolInfoDouble(symbol,SYMBOL_ASK);
+     stop_level=(int)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL);
+     currentProfit = PositionGetDouble(POSITION_PROFIT);
+  }
+  bool closePosition = trade.PositionClose(ticket,1);
   bool a=IsFillingTypeAllowed(_Symbol, 0);
   Print("robot started!");
   //SendNotification("robot started!");
@@ -256,7 +286,7 @@ void OnTick(void)
          request.deviation=100;                                     // allowed deviation from the price
          request.magic    =EA_Magic;   
          request.type_filling = ORDER_FILLING_IOC;  
-         OrderSend(request,result);
+         //OrderSend(request,result);
       }
       //lower = false;
   }
