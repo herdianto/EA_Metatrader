@@ -66,8 +66,8 @@ bool   lower_30 = false;
 bool   upper = false;
 bool   upper_65 = false;
 bool   upper_70 = false;
-int    iRSISellLimit = 70;
-int    iRSIBuyLimit = 30;
+int    iRSISellLimit = 65;
+int    iRSIBuyLimit = 35;
 
 //new minute checking
 datetime PreviousTime;
