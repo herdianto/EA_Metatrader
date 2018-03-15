@@ -188,17 +188,18 @@ void OnTick(void)
       lower_30 = false;
    }
    
-   if(iRsi_handle < iRSIBuyLimit && lower == false){
+   if(iRsi_handle < iRSIBuyLimit && lower == false && iRsi_handle>27.5){
       lower = true;
       SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
       Print("prepare to open position - long, RSI: ",iRsi_handle);
       iRSIReady_long = true;
    }
    
-   if(lower == true && iRsi_handle >= iRSIBuyLimit){
+   if(lower == true && ( iRsi_handle >= iRSIBuyLimit || iRsi_handle<27.5)){
       //SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
       //Print("prepare to open position - long, RSI: ",iRsi_handle);
       //iRSIReady_long = true;
+      iRSIReady_long = false;
       lower = false;
    }
    
@@ -263,7 +264,7 @@ void OnTick(void)
          iRSIReady_long = false;
          SendNotification("Place long position now, price = "+getLatestClosePrice());
          Print("Place long position now, price = ",getLatestClosePrice());
-         bool openLong = openPosition(0.01, -100, 150);
+         bool openLong = openPosition(0.01, -150, 200);
       }
       //lower = false;
   }
