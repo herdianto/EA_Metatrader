@@ -88,7 +88,6 @@ int OnInit(void){
       Alert("Script operation is not allowed on a live account!"); 
       return 0; 
      } 
-  //bool openLong = openPosition(0.01, "ORDER_TYPE_BUY", -100, 150);
   int positionTotal = PositionsTotal();
   ArrayResize(tickets,positionTotal);
   for(int x=0; x<positionTotal; x++){
@@ -254,7 +253,7 @@ void OnTick(void)
          iRSIReady_short = false;
          SendNotification("Place short position now, price = "+getLatestClosePrice());
          Print("Place short position now, price = ",getLatestClosePrice());
-         bool openShort = openPosition(0.01, "ORDER_TYPE_SELL", 150, -100);
+         //bool openShort = openSellPosition(0.01, 150, -100);
       }
       //upper = false;
   }
@@ -264,7 +263,7 @@ void OnTick(void)
          iRSIReady_long = false;
          SendNotification("Place long position now, price = "+getLatestClosePrice());
          Print("Place long position now, price = ",getLatestClosePrice());
-         bool openLong = openPosition(0.01, "ORDER_TYPE_BUY", -100, 150);
+         bool openLong = openPosition(0.01, -100, 150);
       }
       //lower = false;
   }
@@ -316,7 +315,7 @@ bool IsFillingTypeAllowed(string symbol,int fill_type)
    return((filling & fill_type)==fill_type); 
   }
   
-bool openPosition(double volume, string type, double slDigits, double tpDigits){
+bool openPosition(double volume, double slDigits, double tpDigits){
          ZeroMemory(request);
          double point=SymbolInfoDouble(_Symbol,SYMBOL_POINT);
          sl=NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK)+slDigits*point,_Digits);
@@ -325,6 +324,25 @@ bool openPosition(double volume, string type, double slDigits, double tpDigits){
          request.symbol   =Symbol();                              // symbol
          request.volume   =volume;                                   // volume of 0.1 lot
          request.type     =type;                        // order type
+         request.price    =NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK), _Digits); // price for opening
+         request.deviation=10;
+         request.sl = sl;
+         request.tp = tp;                                     // allowed deviation from the price
+         request.magic    =EA_Magic;   
+         request.type_filling = ORDER_FILLING_IOC;  
+         OrderSend(request,result);
+         return true;
+}
+
+bool openSellPosition(double volume, double slDigits, double tpDigits){
+         ZeroMemory(request);
+         double point=SymbolInfoDouble(_Symbol,SYMBOL_POINT);
+         sl=NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK)+slDigits*point,_Digits);
+         tp=NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK)+tpDigits*point,_Digits);
+         request.action   =TRADE_ACTION_DEAL;                     // type of trade operation
+         request.symbol   =Symbol();                              // symbol
+         request.volume   =volume;                                   // volume of 0.1 lot
+         request.type     =ORDER_TYPE_SELL;                        // order type
          request.price    =NormalizeDouble(SymbolInfoDouble(_Symbol,SYMBOL_ASK), _Digits); // price for opening
          request.deviation=10;
          request.sl = sl;
