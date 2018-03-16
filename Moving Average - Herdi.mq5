@@ -66,8 +66,8 @@ bool   lower_30 = false;
 bool   upper = false;
 bool   upper_65 = false;
 bool   upper_70 = false;
-int    iRSISellLimit = 65;
-int    iRSIBuyLimit = 35;
+int    iRSISellLimit = 67;
+int    iRSIBuyLimit = 32;
 
 //new minute checking
 datetime PreviousTime;
@@ -188,18 +188,18 @@ void OnTick(void)
       lower_30 = false;
    }
    
-   if(iRsi_handle < iRSIBuyLimit && lower == false && iRsi_handle>27.5){
+   if(iRsi_handle <= 29 && lower == false){ //TO DO: store in variable
       lower = true;
       SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
       Print("prepare to open position - long, RSI: ",iRsi_handle);
-      iRSIReady_long = true;
+      //iRSIReady_long = true;
    }
    
-   if(lower == true && ( iRsi_handle >= iRSIBuyLimit || iRsi_handle<27.5)){
+   if(lower == true && iRsi_handle >= iRSIBuyLimit ){
       //SendNotification("prepare to open position - long, RSI: "+iRsi_handle);
       //Print("prepare to open position - long, RSI: ",iRsi_handle);
-      //iRSIReady_long = true;
-      iRSIReady_long = false;
+      iRSIReady_long = true;
+      //iRSIReady_long = false;
       lower = false;
    }
    
@@ -247,7 +247,7 @@ void OnTick(void)
   }
   
   //iOsMA Indicator
-  CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,2,iOsMABuffer);
+  CopyBuffer(iOsMA(_Symbol,PERIOD_CURRENT,iOsMA_fast_per, iOsMA_slow_per, iOsMA_signal,PRICE_CLOSE),0,0,3,iOsMABuffer);
   iOsMA_handle = iOsMABuffer[0];
   if(iRSIReady_short){
       if(iOsMABuffer[1]<iOsMABuffer[0]){
@@ -260,7 +260,8 @@ void OnTick(void)
   }
   
   if(iRSIReady_long){
-      if(iOsMABuffer[1]>iOsMABuffer[0]){
+      //if(iOsMABuffer[2]>iOsMABuffer[1] && iOsMABuffer[1]>iOsMABuffer[0] && iRi_shandle > iRSISellLimit){
+      if(iOsMABuffer[1]>iOsMABuffer[0] && iRsi_handle > iRSIBuyLimit){
          iRSIReady_long = false;
          SendNotification("Place long position now, price = "+getLatestClosePrice());
          Print("Place long position now, price = ",getLatestClosePrice());
@@ -276,11 +277,11 @@ void OnTick(void)
       ticket=PositionGetTicket(x);// ticket of the position
       if(type == "ORDER_TYPE_BUY"){
          if(iOsMABuffer[1]<iOsMABuffer[0]){
-            bool closePosition = trade.PositionClose(ticket,1);
+           // bool closePosition = trade.PositionClose(ticket,1);
          }
       }else if(type == "ORDER_TYPE_SELL"){
          if(iOsMABuffer[1]>iOsMABuffer[0]){
-            bool closePosition = trade.PositionClose(ticket,1);
+            //bool closePosition = trade.PositionClose(ticket,1);
          }
       }
    }
